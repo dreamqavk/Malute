@@ -60,13 +60,12 @@
         </TextView>
 
         <EditText
+            android:id="@+id/editTextEmail"
             android:background="@drawable/edditing_bg"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="example@mail.com"
-            android:padding="10dp">
-
-        </EditText>
+            android:padding="10dp" />
 
     </LinearLayout>
 
@@ -91,11 +90,12 @@
         </TextView>
 
         <EditText
+            android:id="@+id/editTextPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/edditing_bg"
-            android:padding="10dp">
-        </EditText>
+            android:padding="10dp"
+            android:inputType="textPassword"/>
 
     </LinearLayout>
 
