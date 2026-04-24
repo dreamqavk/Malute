@@ -1,5 +1,6 @@
 package com.example.malute;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -16,6 +17,7 @@ public class EntranceActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.entrance);
+
         dot1 = findViewById(R.id.dot1);
         dot2 = findViewById(R.id.dot2);
         dot3 = findViewById(R.id.dot3);
@@ -82,6 +84,8 @@ public class EntranceActivity extends AppCompatActivity {
     private void checkPin() {
         if (pinCode.equals(CORRECT_PIN)) {
             Toast.makeText(this, "PIN верный!", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(EntranceActivity.this, HomePageActivity.class);
+            startActivity(intent);
             finish();
         } else {
             Toast.makeText(this, "Неверный PIN-код", Toast.LENGTH_SHORT).show();

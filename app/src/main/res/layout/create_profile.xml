@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF">
@@ -57,7 +56,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/topTextContainer">
 
-
         <EditText
             android:id="@+id/editTextName"
             android:layout_width="match_parent"
@@ -65,7 +63,6 @@
             android:hint="Имя"
             android:background="@drawable/edditing_bg"
             android:padding="10dp" />
-
 
         <EditText
             android:id="@+id/editTextPatronymic"
@@ -89,7 +86,7 @@
             android:id="@+id/editTextBirthDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Дата рождения"
+            android:hint="Дата рождения (ДД.ММ.ГГГГ)"
             android:layout_marginTop="20dp"
             android:background="@drawable/edditing_bg"
             android:padding="10dp" />
@@ -102,6 +99,7 @@
             android:background="@drawable/spinner_background"
             android:padding="12dp"
             android:spinnerMode="dropdown" />
+
         <EditText
             android:id="@+id/editTextEmail"
             android:layout_width="match_parent"
@@ -109,7 +107,18 @@
             android:hint="Почта"
             android:layout_marginTop="20dp"
             android:background="@drawable/edditing_bg"
-            android:padding="10dp" />
+            android:padding="10dp"
+            android:inputType="textEmailAddress" />
+
+        <EditText
+            android:id="@+id/editTextPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Пароль"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/edditing_bg"
+            android:padding="10dp"
+            android:inputType="textPassword" />
 
         <Button
             android:id="@+id/buttonSave"
@@ -119,7 +128,8 @@
             android:layout_marginTop="30dp"
             android:background="@drawable/button_color"
             android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            app:backgroundTint="#1A6FEE" />
 
     </LinearLayout>
 

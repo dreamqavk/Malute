@@ -1,9 +1,14 @@
 package com.example.malute;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -11,36 +16,49 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import com.example.malute.api.AuthManager;
+import com.example.malute.entity.CatalogProduct;
 import java.util.ArrayList;
+import java.util.List;
 
 public class HomePageActivity extends AppCompatActivity {
 
-    private TextView searchText;
+    private EditText searchText;
     private TextView categoryAll, categoryWomen, categoryMen;
-    private View categoryUnderline;
+    private View underlineAll, underlineWomen, underlineMen;
     private LinearLayout navHome, navCatalog, navProjects, navProfile;
     private ImageView navHomeIcon, navCatalogIcon, navProjectsIcon, navProfileIcon;
     private TextView navHomeText, navCatalogText, navProjectsText, navProfileText;
     private ScrollView productsScroll;
-    private HorizontalScrollView newsScroll;
-
-    private Button addButton1, addButton2;
-    private LinearLayout productCard1, productCard2;
+    private LinearLayout productsContainer;
     private LinearLayout newsCard1, newsCard2;
 
-    private ArrayList<TextView> categoryList;
     private int currentCategory = 0;
+    private List<CatalogProduct> allProducts;
+    private List<CatalogProduct> filteredProducts;
+    private AuthManager authManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home_page);
 
+        authManager = new AuthManager(this);
+
+        if (!authManager.isLoggedIn()) {
+            Intent intent = new Intent(HomePageActivity.this, LoginActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         initViews();
+        initMockProducts();
         setupListeners();
-        setupProductCards();
+        setupSearch();
+        filterProductsByCategory();
+        updateNavigationState(0);
         setupNewsCards();
-        updateUnderlinePosition();
     }
 
     private void initViews() {
@@ -48,7 +66,9 @@ public class HomePageActivity extends AppCompatActivity {
         categoryAll = findViewById(R.id.categoryAll);
         categoryWomen = findViewById(R.id.categoryWomen);
         categoryMen = findViewById(R.id.categoryMen);
-        categoryUnderline = findViewById(R.id.categoryUnderline);
+        underlineAll = findViewById(R.id.underlineAll);
+        underlineWomen = findViewById(R.id.underlineWomen);
+        underlineMen = findViewById(R.id.underlineMen);
 
         navHome = findViewById(R.id.navHome);
         navCatalog = findViewById(R.id.navCatalog);
@@ -66,179 +86,176 @@ public class HomePageActivity extends AppCompatActivity {
         navProfileText = findViewById(R.id.navProfileText);
 
         productsScroll = findViewById(R.id.productsScroll);
-        newsScroll = findViewById(R.id.newsScroll);
-
-        addButton1 = findViewById(R.id.add_button);
-        addButton2 = findViewById(R.id.add_button_2);
-
-        productCard1 = findViewById(R.id.productCard1);
-        productCard2 = findViewById(R.id.productCard2);
+        productsContainer = findViewById(R.id.productsContainer);
 
         newsCard1 = findViewById(R.id.newsCard1);
         newsCard2 = findViewById(R.id.newsCard2);
 
-        categoryList = new ArrayList<>();
-        categoryList.add(categoryAll);
-        categoryList.add(categoryWomen);
-        categoryList.add(categoryMen);
+        allProducts = new ArrayList<>();
+        filteredProducts = new ArrayList<>();
+    }
+
+    private void initMockProducts() {
+        allProducts.add(new CatalogProduct("1", "Рубашка Воскресенье", "Мужская одежда", "", "300 ₽", 300, "Рубашка для машинного вязания", "Хлопок 100%"));
+        allProducts.add(new CatalogProduct("2", "Платье Летнее", "Женская одежда", "", "850 ₽", 850, "Легкое летнее платье", "Вискоза 95%"));
+        allProducts.add(new CatalogProduct("3", "Брюки Классические", "Мужская одежда", "", "1200 ₽", 1200, "Классические брюки", "Полиэстер 65%"));
+        allProducts.add(new CatalogProduct("4", "Юбка Миди", "Женская одежда", "", "650 ₽", 650, "Элегантная юбка", "Хлопок 100%"));
+        allProducts.add(new CatalogProduct("5", "Свитер Уютный", "Мужская одежда", "", "950 ₽", 950, "Теплый свитер", "Шерсть 70%"));
+        allProducts.add(new CatalogProduct("6", "Блуза Шелковая", "Женская одежда", "", "1100 ₽", 1100, "Изысканная блуза", "Полиэстер 100%"));
+        allProducts.add(new CatalogProduct("7", "Джинсы Слим", "Мужская одежда", "", "1800 ₽", 1800, "Современные джинсы", "Хлопок 98%"));
+        allProducts.add(new CatalogProduct("8", "Пальто Осеннее", "Женская одежда", "", "2500 ₽", 2500, "Стильное пальто", "Шерсть 60%"));
+        allProducts.add(new CatalogProduct("9", "Шорты Спортивные", "Мужская одежда", "", "700 ₽", 700, "Спортивные шорты", "Полиэстер 100%"));
+        allProducts.add(new CatalogProduct("10", "Топ Летний", "Женская одежда", "", "450 ₽", 450, "Легкий топ", "Хлопок 100%"));
+
+        filteredProducts.addAll(allProducts);
+    }
+
+    private void setupSearch() {
+        searchText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterBySearch(s.toString());
+            }
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void filterBySearch(String query) {
+        filteredProducts.clear();
+        if (query.isEmpty()) {
+            filteredProducts.addAll(allProducts);
+        } else {
+            for (CatalogProduct product : allProducts) {
+                if (product.getTitle().toLowerCase().contains(query.toLowerCase()) ||
+                        product.getCategory().toLowerCase().contains(query.toLowerCase())) {
+                    filteredProducts.add(product);
+                }
+            }
+        }
+        filterProductsByCategory();
+        if (filteredProducts.isEmpty()) {
+            Toast.makeText(this, "Ничего не найдено", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupListeners() {
-        searchText.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Поиск описаний", Toast.LENGTH_SHORT).show();
-        });
-
         categoryAll.setOnClickListener(v -> {
             currentCategory = 0;
-            selectCategory(categoryAll);
-            filterProductsByCategory("all");
+            selectCategory(categoryAll, underlineAll, underlineWomen, underlineMen);
         });
-
         categoryWomen.setOnClickListener(v -> {
             currentCategory = 1;
-            selectCategory(categoryWomen);
-            filterProductsByCategory("women");
+            selectCategory(categoryWomen, underlineWomen, underlineAll, underlineMen);
         });
-
         categoryMen.setOnClickListener(v -> {
             currentCategory = 2;
-            selectCategory(categoryMen);
-            filterProductsByCategory("men");
+            selectCategory(categoryMen, underlineMen, underlineAll, underlineWomen);
         });
 
-        navHome.setOnClickListener(v -> {
-            selectNavigationItem(0);
-            productsScroll.smoothScrollTo(0, 0);
-            newsScroll.smoothScrollTo(0, 0);
-        });
-
+        navHome.setOnClickListener(v -> updateNavigationState(0));
         navCatalog.setOnClickListener(v -> {
-            selectNavigationItem(1);
-            Toast.makeText(HomePageActivity.this, "Открыть каталог", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(HomePageActivity.this, CatalogActivity.class));
+            finish();
         });
-
         navProjects.setOnClickListener(v -> {
-            selectNavigationItem(2);
-            Toast.makeText(HomePageActivity.this, "Открыть проекты", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(HomePageActivity.this, ProjectsActivity.class));
+            finish();
         });
-
         navProfile.setOnClickListener(v -> {
-            selectNavigationItem(3);
-            Toast.makeText(HomePageActivity.this, "Открыть профиль", Toast.LENGTH_SHORT).show();
-        });
-
-        productCard1.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Рубашка Воскресенье", Toast.LENGTH_SHORT).show();
-        });
-
-        productCard2.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Рубашка Воскресенье", Toast.LENGTH_SHORT).show();
-        });
-
-        newsCard1.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Шорты Вторник - 4000 ₽", Toast.LENGTH_SHORT).show();
-        });
-
-        newsCard2.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Рубан Восклицкий - 8000 ₽", Toast.LENGTH_SHORT).show();
-        });
-    }
-
-    private void setupProductCards() {
-        addButton1.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Товар добавлен в корзину", Toast.LENGTH_SHORT).show();
-            addButton1.setText("Добавлено");
-            addButton1.setEnabled(false);
-            addButton1.postDelayed(() -> {
-                addButton1.setText("Добавить");
-                addButton1.setEnabled(true);
-            }, 2000);
-        });
-
-        addButton2.setOnClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Товар добавлен в корзину", Toast.LENGTH_SHORT).show();
-            addButton2.setText("Добавлено");
-            addButton2.setEnabled(false);
-            addButton2.postDelayed(() -> {
-                addButton2.setText("Добавить");
-                addButton2.setEnabled(true);
-            }, 2000);
+            startActivity(new Intent(HomePageActivity.this, ProfileActivity.class));
+            finish();
         });
     }
 
     private void setupNewsCards() {
-        newsCard1.setOnLongClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Акция: Шорты Вторник", Toast.LENGTH_SHORT).show();
-            return true;
+        newsCard1.setOnClickListener(v -> {
+            Toast.makeText(this, "Шорты Вторник - 4000 ₽", Toast.LENGTH_SHORT).show();
         });
-
-        newsCard2.setOnLongClickListener(v -> {
-            Toast.makeText(HomePageActivity.this, "Акция: Рубан Восклицкий", Toast.LENGTH_SHORT).show();
-            return true;
+        newsCard2.setOnClickListener(v -> {
+            Toast.makeText(this, "Рубан Восклицкий - 8000 ₽", Toast.LENGTH_SHORT).show();
         });
     }
 
-    private void selectCategory(TextView selected) {
-        for (TextView category : categoryList) {
-            if (category == selected) {
-                category.setTextColor(Color.parseColor("#1A6FEE"));
-            } else {
-                category.setTextColor(Color.parseColor("#666666"));
+    private void selectCategory(TextView selectedCategory, View activeUnderline, View... inactiveUnderlines) {
+        categoryAll.setTextColor(Color.parseColor("#666666"));
+        categoryWomen.setTextColor(Color.parseColor("#666666"));
+        categoryMen.setTextColor(Color.parseColor("#666666"));
+        selectedCategory.setTextColor(Color.parseColor("#1A6FEE"));
+
+        activeUnderline.setVisibility(View.VISIBLE);
+        for (View underline : inactiveUnderlines) {
+            underline.setVisibility(View.GONE);
+        }
+        filterProductsByCategory();
+    }
+
+    private void filterProductsByCategory() {
+        List<CatalogProduct> displayProducts = new ArrayList<>();
+        for (CatalogProduct product : filteredProducts) {
+            if (currentCategory == 0) {
+                displayProducts.add(product);
+            } else if (currentCategory == 1 && product.getCategory().toLowerCase().contains("жен")) {
+                displayProducts.add(product);
+            } else if (currentCategory == 2 && product.getCategory().toLowerCase().contains("муж")) {
+                displayProducts.add(product);
             }
         }
-        updateUnderlinePosition();
+        updateProductsContainer(displayProducts);
     }
 
-    private void updateUnderlinePosition() {
-        int underlineWidth = 60;
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int categoryWidth = screenWidth / 3;
+    private void updateProductsContainer(List<CatalogProduct> products) {
+        productsContainer.removeAllViews();
 
-        int startPosition = currentCategory * categoryWidth + (categoryWidth / 2) - (underlineWidth / 2);
+        if (products.isEmpty()) {
+            TextView emptyText = new TextView(this);
+            emptyText.setText("Нет товаров в этой категории");
+            emptyText.setTextColor(Color.parseColor("#999999"));
+            emptyText.setTextSize(14);
+            emptyText.setPadding(0, 40, 0, 0);
+            emptyText.setGravity(android.view.Gravity.CENTER);
+            productsContainer.addView(emptyText);
+            return;
+        }
 
-        categoryUnderline.animate()
-                .translationX(startPosition)
-                .setDuration(200)
-                .start();
-    }
+        for (CatalogProduct product : products) {
+            View productView = getLayoutInflater().inflate(R.layout.product_card_item, productsContainer, false);
 
-    private void filterProductsByCategory(String category) {
-        switch (category) {
-            case "all":
-                productCard1.setVisibility(View.VISIBLE);
-                productCard2.setVisibility(View.VISIBLE);
-                break;
-            case "women":
-                productCard1.setVisibility(View.GONE);
-                productCard2.setVisibility(View.GONE);
-                Toast.makeText(HomePageActivity.this, "Женские товары", Toast.LENGTH_SHORT).show();
-                break;
-            case "men":
-                productCard1.setVisibility(View.VISIBLE);
-                productCard2.setVisibility(View.VISIBLE);
-                Toast.makeText(HomePageActivity.this, "Мужские товары", Toast.LENGTH_SHORT).show();
-                break;
+            TextView title = productView.findViewById(R.id.productTitle);
+            TextView category = productView.findViewById(R.id.productCategory);
+            TextView price = productView.findViewById(R.id.productPrice);
+            Button addButton = productView.findViewById(R.id.addButton);
+
+            title.setText(product.getTitle());
+            category.setText(product.getCategory());
+            price.setText(product.getPriceText());
+
+            addButton.setOnClickListener(v -> {
+                Toast.makeText(HomePageActivity.this, product.getTitle() + " добавлен в корзину", Toast.LENGTH_SHORT).show();
+            });
+
+            productView.setOnClickListener(v -> {
+                Toast.makeText(HomePageActivity.this, product.getTitle(), Toast.LENGTH_SHORT).show();
+            });
+
+            productsContainer.addView(productView);
         }
     }
 
-    private void selectNavigationItem(int index) {
+    private void updateNavigationState(int selectedIndex) {
         int activeColor = Color.parseColor("#1A6FEE");
-        int inactiveColor = Color.parseColor("#666666");
+        int inactiveColor = Color.parseColor("#999999");
 
-        TextView[] texts = {navHomeText, navCatalogText, navProjectsText, navProfileText};
+        navHomeText.setTextColor(selectedIndex == 0 ? activeColor : inactiveColor);
+        navCatalogText.setTextColor(selectedIndex == 1 ? activeColor : inactiveColor);
+        navProjectsText.setTextColor(selectedIndex == 2 ? activeColor : inactiveColor);
+        navProfileText.setTextColor(selectedIndex == 3 ? activeColor : inactiveColor);
 
-        for (int i = 0; i < texts.length; i++) {
-            if (texts[i] != null) {
-                if (i == index) {
-                    texts[i].setTextColor(activeColor);
-                } else {
-                    texts[i].setTextColor(inactiveColor);
-                }
-            }
-        }
-
-        if (index == 0) {
-            navHomeIcon.setImageResource(R.drawable.ic_home_active);
-        }
+        navHomeIcon.setImageResource(selectedIndex == 0 ? R.drawable.ic_home_active : R.drawable.ic_home);
+        navCatalogIcon.setImageResource(selectedIndex == 1 ? R.drawable.ic_catalog_active : R.drawable.ic_catalog);
+        navProjectsIcon.setImageResource(selectedIndex == 2 ? R.drawable.ic_projects_active : R.drawable.ic_projects);
+        navProfileIcon.setImageResource(selectedIndex == 3 ? R.drawable.ic_profile_active : R.drawable.ic_profile);
     }
 }
